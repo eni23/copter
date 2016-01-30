@@ -1,6 +1,3 @@
 dongle/build/*/*
 dongle/build/*
 !dongle/build/.gitkeep
-
-poller/node_modules/*
-poller/*npm-debug.log*
