@@ -1,0 +1,8 @@
+dhtsender/build/*
+!dhtsender/build/.gitkeep
+
+usb-dongle/build/*
+!usb-dongle/build/.gitkeep
+
+poller/node_modules/*
+poller/*npm-debug.log*
