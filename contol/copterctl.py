@@ -9,6 +9,10 @@ from pygame.locals import *
 class App:
     def __init__(self):
         pygame.init()
+        self.last_t = 1000;
+        self.last_a = 1500;
+        self.last_e = 1500;
+        self.last_r = 1500;
 
         pygame.joystick.init()
         self.my_joystick = None
@@ -32,12 +36,16 @@ class App:
         print("opening serial")
         self.serial = serial.Serial(
             port='/dev/ttyUSB0',
-            baudrate=115200
+            baudrate=57600
         )
         self.serial.isOpen()
         time.sleep(5)
         print("serial ready")
 
+
+    def invert_float(self, n):
+        n *= -1;
+        return n;
 
     # convert range
     def range_convert(self, value, old_min, old_max, new_min, new_max):
@@ -50,6 +58,7 @@ class App:
         checksum = crc8dallas.calc(msg_d)
         msg = struct.pack("=HHHHB", t, a, e, r, checksum)
         #print(msg)
+        #self.serial.flushOutput()
         self.serial.write(msg)
 
 
@@ -66,20 +75,31 @@ class App:
                     self.quit()
                     return
 
-            throttle = int( self.range_convert(self.my_joystick.get_axis(4),-1,1,0,1000) )+1000;
-            elevator = int( self.range_convert(self.my_joystick.get_axis(1),-1,1,0,1000) )+1000;
+            throttle = int( self.range_convert(self.my_joystick.get_axis(4),-1,1,0,1000)+1000);
+            elevator = int( self.range_convert(self.invert_float(self.my_joystick.get_axis(1)),-1,1,0,1000) )+1000;
             aileron = int( self.range_convert(self.my_joystick.get_axis(0),-1,1,0,1000) )+1000;
+            rudder = int(self.range_convert(self.my_joystick.get_axis(2),-1,1,0,1000) )+1000;
 
-
-            #print("{0}\t{1}\t{2}".format(throttle,elevator,aileron))
-            #print(throttle)
-
-            self.send_data(throttle,aileron,elevator,1500)
-            #pygame.time.wait(5)
-            res=self.serial.readline();
-            print(res);
-            pygame.time.wait(200)
-
+            '''
+            change = False
+            if (self.last_t != throttle):
+                change = True
+                self.last_t = throttle
+            if (self.last_a != aileron):
+                change = True
+                self.last_a = aileron
+            if (self.last_e != elevator):
+                change = True
+                self.last_e = elevator
+            if (self.last_r != rudder):
+                change = True
+                self.last_r = rudder
+            '''
+            if (True):
+                print("{0}\t{1}\t{2}\t{3}".format(throttle,elevator,aileron,rudder))
+                #self.send_data(throttle,aileron,elevator,rudder)
+                self.send_data(throttle,aileron,elevator,rudder)
+                pygame.time.wait(50)
 
 
 app = App()

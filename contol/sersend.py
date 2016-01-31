@@ -36,5 +36,5 @@ while True:
 
     send_data(ser,th,PPM_MID,PPM_MID,PPM_MID);
     time.sleep(0.1);
-    res = ser.readline();
-    print(res);
+    #res = ser.readline();
+    #print(res);

@@ -62,9 +62,8 @@ enum {
     PROTO_END
 };
 
-volatile uint8_t rcv_data[9];
-volatile uint8_t rcv_complete = 0;
-volatile uint8_t rcv_count = 0;
+
+uint8_t rcv_data[12];
 uint8_t transmitterID[4];
 uint8_t current_protocol;
 static volatile bool ppm_ok = false;
@@ -75,7 +74,7 @@ static uint16_t ppm[12] = {PPM_MIN,PPM_MID,PPM_MID,PPM_MID,PPM_MID,PPM_MID,
                            PPM_MID,PPM_MID,PPM_MID,PPM_MID,PPM_MID,PPM_MID,};
 
 void setup() {
-    Serial.begin(57600);
+    Serial.begin(115200);
     randomSeed((analogRead(A4) & 0x1F) | (analogRead(A5) << 5));
     pinMode(ledPin, OUTPUT);
     digitalWrite(ledPin, LOW); //start LED off
@@ -95,33 +94,31 @@ void setup() {
 
 void loop(){
     uint32_t timeout;
-    if (rcv_complete == 1){
-      process_serial_data();
-      rcv_complete=0;
+    if ( Serial.available() ) {
+      serial_event();
     }
+    // process protocol
     timeout = process_CX10();
     while(micros() < timeout)
     {   };
-
 }
 
 
 
-void serialEvent() {
-  if (rcv_count <= 8){
-    rcv_data[rcv_count] = Serial.read();
-    rcv_count++;
+void serial_event() {
+  uint8_t counter=0;
+  while (Serial.available()) {
+    rcv_data[counter] = Serial.read();
+    counter++;
   }
-  else {
-    rcv_complete = 1;
-    rcv_count = 0;
-  }
+  process_serial_data();
 }
+
 
 
 void process_serial_data(){
 
-  /*uint8_t data[8] = {
+  uint8_t data[8] = {
     rcv_data[0],
     rcv_data[1],
     rcv_data[2],
@@ -133,12 +130,11 @@ void process_serial_data(){
   };
   uint8_t crc = CRC8(data,8);
   if (crc == rcv_data[8]){
-    //ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-*/
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
       ppm[THROTTLE] = ( (uint16_t) rcv_data[1] << 8) | rcv_data[0];
       ppm[AILERON] = ( (uint16_t) rcv_data[3] << 8) | rcv_data[2];
       ppm[ELEVATOR] = ( (uint16_t) rcv_data[5] << 8) | rcv_data[4];
       ppm[RUDDER] = ( (uint16_t) rcv_data[7] << 8) | rcv_data[6];
-    //}
-  //}
+    }
+  }
 }
