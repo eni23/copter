@@ -3,7 +3,7 @@
 
 #include <util/atomic.h>
 #include "iface_nrf24l01.h"
-
+#include "crc8.h"
 
 // ############ Wiring ################
 #define PPM_pin   2  // PPM in
@@ -63,7 +63,7 @@ enum {
 };
 
 
-uint8_t rcv_data[8];
+uint8_t rcv_data[9];
 uint8_t transmitterID[4];
 uint8_t current_protocol;
 static volatile bool ppm_ok = false;
@@ -78,7 +78,6 @@ void setup() {
     randomSeed((analogRead(A4) & 0x1F) | (analogRead(A5) << 5));
     pinMode(ledPin, OUTPUT);
     digitalWrite(ledPin, LOW); //start LED off
-    //pinMode(PPM_pin, INPUT);
     pinMode(MOSI_pin, OUTPUT);
     pinMode(SCK_pin, OUTPUT);
     pinMode(CS_pin, OUTPUT);
@@ -90,12 +89,6 @@ void setup() {
     NRF24L01_Initialize();
     CX10_init();
     CX10_bind();
-    // PPM ISR setup
-    //attachInterrupt(PPM_pin - 2, ISR_ppm, CHANGE);
-    //TCCR1A = 0;  //reset timer1
-    //TCCR1B = 0;
-    //TCCR1B |= (1 << CS11);  //set timer1 to increment every 1 us @ 8MHz, 0.5 us @16MHz
-    //set_txid(false);
     delay(4000);
 }
 
@@ -121,23 +114,27 @@ void serial_event() {
   process_serial_data();
 }
 
+
+
 void process_serial_data(){
-  ppm[THROTTLE] = ( (uint16_t) rcv_data[1] << 8) | rcv_data[0];
-  ppm[AILERON] = ( (uint16_t) rcv_data[3] << 8) | rcv_data[2];
-  ppm[ELEVATOR] = ( (uint16_t) rcv_data[5] << 8) | rcv_data[4];
-  ppm[RUDDER] = ( (uint16_t) rcv_data[7] << 8) | rcv_data[6];
+
+  uint8_t data[8] = {
+    rcv_data[0],
+    rcv_data[1],
+    rcv_data[2],
+    rcv_data[3],
+    rcv_data[4],
+    rcv_data[5],
+    rcv_data[6],
+    rcv_data[7]
+  };
+
+  uint8_t crc = CRC8(data,8);
+  if (crc == rcv_data[8]){
+    ppm[THROTTLE] = ( (uint16_t) rcv_data[1] << 8) | rcv_data[0];
+    ppm[AILERON] = ( (uint16_t) rcv_data[3] << 8) | rcv_data[2];
+    ppm[ELEVATOR] = ( (uint16_t) rcv_data[5] << 8) | rcv_data[4];
+    ppm[RUDDER] = ( (uint16_t) rcv_data[7] << 8) | rcv_data[6];
+  }
 
 }
-
-/*
-void set_txid(bool renew){
-    uint8_t i;
-    for(i=0; i<4; i++)
-        transmitterID[i] = EEPROM.read(ee_TXID0+i);
-    if(renew || (transmitterID[0]==0xFF && transmitterID[1]==0x0FF)) {
-        for(i=0; i<4; i++) {
-            transmitterID[i] = random() & 0xFF;
-            EEPROM.update(ee_TXID0+i, transmitterID[i]);
-        }
-    }
-}*/
