@@ -55,8 +55,8 @@ class App:
     # send data to dongle
     def send_data(self, t, a, e, r):
         msg_d = struct.pack("=HHHH", t, a, e, r)
-        checksum = crc8dallas.calc(msg_d)
-        msg = struct.pack("=HHHHB", t, a, e, r, checksum)
+        #checksum = crc8dallas.calc(msg_d)
+        msg = struct.pack("=HHHHB", t, a, e, r, 0)
         #print(msg)
         #self.serial.flushOutput()
         self.serial.write(msg)
@@ -99,7 +99,7 @@ class App:
                 print("{0}\t{1}\t{2}\t{3}".format(throttle,elevator,aileron,rudder))
                 #self.send_data(throttle,aileron,elevator,rudder)
                 self.send_data(throttle,aileron,elevator,rudder)
-                pygame.time.wait(50)
+                pygame.time.wait(70)
 
 
 app = App()
