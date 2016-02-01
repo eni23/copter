@@ -4,6 +4,7 @@ import time
 import pygame
 import crc8dallas
 import sys
+import log
 from pygame.locals import *
 
 
@@ -21,19 +22,18 @@ class App:
         for i in range(0, pygame.joystick.get_count()):
             self.joystick_names.append(pygame.joystick.Joystick(i).get_name())
 
-        print("Using Joystick: " + self.joystick_names[0])
+        log.debug("Using Joystick: " + self.joystick_names[0])
 
-        # By default, load the first available joystick.
         if (len(self.joystick_names) > 0):
             self.my_joystick = pygame.joystick.Joystick(0)
             self.my_joystick.init()
-            print("joystick initalized, now press r2 on it")
+            log.info("Joystick initalized, press r2 to continue")
             val=0
             while val != -1.0:
                 self.g_keys = pygame.event.get()
                 val = self.my_joystick.get_axis(4)
                 pygame.time.wait(20)
-            print("OK")
+            log.info("Joystick calibrated")
 
         # init usb serial dongle
         self.init_serial()
@@ -41,18 +41,19 @@ class App:
 
     # init serial port
     def init_serial(self):
-        print("opening serial")
+        log.debug("Opening serial port")
         self.serial = serial.Serial(
             port='/dev/ttyUSB0',
             baudrate=57600
         )
         self.serial.isOpen()
         time.sleep(1)
-        #print("serial ready")
-        print("wait for pairing")
+        log.debug("Serial ready")
+        log.info("Turn on the quadcopter now")
         r = self.serial.read(1)
+        log.debug("Got response from dongle: {0}".format(r[0]))
         time.sleep(10)
-        print("ready 2 fly")
+        log.info("Ready to fly")
 
     def invert_float(self, n):
         n *= -1;
