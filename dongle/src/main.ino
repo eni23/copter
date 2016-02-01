@@ -91,6 +91,7 @@ void setup() {
     CX10_init();
     CX10_bind();
     delay(4000);
+    Serial.print(5);
 }
 
 void loop(){

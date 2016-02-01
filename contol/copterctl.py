@@ -39,9 +39,12 @@ class App:
             baudrate=57600
         )
         self.serial.isOpen()
-        time.sleep(5)
-        print("serial ready")
-
+        time.sleep(1)
+        #print("serial ready")
+        print("wait for pairing")
+        r = self.serial.read(1)
+        time.sleep(10)
+        print("ready 2 fly")
 
     def invert_float(self, n):
         n *= -1;
@@ -62,6 +65,14 @@ class App:
         self.serial.write(msg)
 
 
+
+    def min_th(self, value, num):
+        if value > 0:
+            return value - num
+        else:
+            return value + num
+
+
     # main loop
     def main(self):
         pt=0
@@ -75,9 +86,17 @@ class App:
                     self.quit()
                     return
 
-            throttle = int( self.range_convert(self.my_joystick.get_axis(4),-1,1,0,1000)+1000);
-            elevator = int( self.range_convert(self.invert_float(self.my_joystick.get_axis(1)),-1,1,0,1000) )+1000;
-            aileron = int( self.range_convert(self.my_joystick.get_axis(0),-1,1,0,1000) )+1000;
+
+
+            throttle = int( self.range_convert(self.my_joystick.get_axis(4),-1,1,0,1000) + 1000 )
+
+            val_ele = self.invert_float(self.my_joystick.get_axis(1))
+            val_aie = self.my_joystick.get_axis(0)
+
+            elevator = int( self.range_convert( val_ele,-1,1,0,1000) + 1000 )
+            aileron =  int( self.range_convert( val_aie,-1,1,0,1000) + 1000 )
+
+
             rudder = int(self.range_convert(self.my_joystick.get_axis(2),-1,1,0,1000) )+1000;
 
             '''
