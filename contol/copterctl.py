@@ -3,6 +3,7 @@ import serial
 import time
 import pygame
 import crc8dallas
+import sys
 from pygame.locals import *
 
 
@@ -13,19 +14,26 @@ class App:
         self.last_a = 1500;
         self.last_e = 1500;
         self.last_r = 1500;
-
+        self.r2_lock = True
         pygame.joystick.init()
         self.my_joystick = None
         self.joystick_names = []
         for i in range(0, pygame.joystick.get_count()):
             self.joystick_names.append(pygame.joystick.Joystick(i).get_name())
 
-        print(self.joystick_names)
+        print("Using Joystick: " + self.joystick_names[0])
 
         # By default, load the first available joystick.
         if (len(self.joystick_names) > 0):
             self.my_joystick = pygame.joystick.Joystick(0)
             self.my_joystick.init()
+            print("joystick initalized, now press r2 on it")
+            val=0
+            while val != -1.0:
+                self.g_keys = pygame.event.get()
+                val = self.my_joystick.get_axis(4)
+                pygame.time.wait(20)
+            print("OK")
 
         # init usb serial dongle
         self.init_serial()
@@ -77,7 +85,9 @@ class App:
     def main(self):
         pt=0
         while (True):
+
             self.g_keys = pygame.event.get()
+
             for event in self.g_keys:
                 if (event.type == KEYDOWN and event.key == K_ESCAPE):
                     self.quit()
@@ -115,8 +125,7 @@ class App:
                 self.last_r = rudder
             '''
             if (True):
-                print("{0}\t{1}\t{2}\t{3}".format(throttle,elevator,aileron,rudder))
-                #self.send_data(throttle,aileron,elevator,rudder)
+                #print("{0}\t{1}\t{2}\t{3}".format(throttle,elevator,aileron,rudder))
                 self.send_data(throttle,aileron,elevator,rudder)
                 pygame.time.wait(70)
 
