@@ -10,28 +10,23 @@ from pygame.locals import *
 
 class App:
     def __init__(self):
+        self.sensitivity = 80
         pygame.init()
-        self.last_t = 1000;
-        self.last_a = 1500;
-        self.last_e = 1500;
-        self.last_r = 1500;
-        self.r2_lock = True
         pygame.joystick.init()
-        self.my_joystick = None
+        self.joystick = None
         self.joystick_names = []
         for i in range(0, pygame.joystick.get_count()):
             self.joystick_names.append(pygame.joystick.Joystick(i).get_name())
-
         log.debug("Using Joystick: " + self.joystick_names[0])
 
         if (len(self.joystick_names) > 0):
-            self.my_joystick = pygame.joystick.Joystick(0)
-            self.my_joystick.init()
+            self.joystick = pygame.joystick.Joystick(0)
+            self.joystick.init()
             log.info("Joystick initalized, press r2 to continue")
             val=0
             while val != -1.0:
                 self.g_keys = pygame.event.get()
-                val = self.my_joystick.get_axis(4)
+                val = self.joystick.get_axis(4)
                 pygame.time.wait(20)
             log.info("Joystick calibrated")
 
@@ -52,9 +47,11 @@ class App:
         log.info("Turn on the quadcopter now")
         r = self.serial.read(1)
         log.debug("Got response from dongle: {0}".format(r[0]))
-        time.sleep(10)
+        time.sleep(5)
         log.info("Ready to fly")
 
+
+    # invert float number
     def invert_float(self, n):
         n *= -1;
         return n;
@@ -66,13 +63,10 @@ class App:
 
     # send data to dongle
     def send_data(self, t, a, e, r):
-        msg_d = struct.pack("=HHHH", t, a, e, r)
+        #msg_d = struct.pack("=HHHH", t, a, e, r)
         #checksum = crc8dallas.calc(msg_d)
         msg = struct.pack("=HHHHB", t, a, e, r, 0)
-        #print(msg)
-        #self.serial.flushOutput()
         self.serial.write(msg)
-
 
 
     def min_th(self, value, num):
@@ -80,6 +74,12 @@ class App:
             return value - num
         else:
             return value + num
+
+    def min_pct(self, value, amount):
+        return value * (amount / 100)
+
+    def ppm_val(self, value):
+        return int( self.range_convert(value,-1,1,0,1000) + 1000 )
 
 
     # main loop
@@ -97,38 +97,26 @@ class App:
                     self.quit()
                     return
 
+            if (self.joystick.get_button(4)):
+                self.sensitivity = self.sensitivity - 1;
+                log.info("Sensitivity: {0}%".format(self.sensitivity))
+            if (self.joystick.get_button(5)):
+                self.sensitivity = self.sensitivity + 1;
+                log.info("Sensitivity: {0}%".format(self.sensitivity))
 
+            raw_t = self.joystick.get_axis(4)
+            raw_r = self.joystick.get_axis(2)
+            raw_e = self.invert_float( self.joystick.get_axis(1) )
+            raw_a = self.joystick.get_axis(0)
 
-            throttle = int( self.range_convert(self.my_joystick.get_axis(4),-1,1,0,1000) + 1000 )
+            throttle = self.ppm_val( raw_t )
+            rudder   = self.ppm_val( self.min_pct(raw_r, self.sensitivity) )
+            elevator = self.ppm_val( self.min_pct(raw_e, self.sensitivity) )
+            aileron  = self.ppm_val( self.min_pct(raw_a, self.sensitivity) )
 
-            val_ele = self.invert_float(self.my_joystick.get_axis(1))
-            val_aie = self.my_joystick.get_axis(0)
-
-            elevator = int( self.range_convert( val_ele,-1,1,0,1000) + 1000 )
-            aileron =  int( self.range_convert( val_aie,-1,1,0,1000) + 1000 )
-
-
-            rudder = int(self.range_convert(self.my_joystick.get_axis(2),-1,1,0,1000) )+1000;
-
-            '''
-            change = False
-            if (self.last_t != throttle):
-                change = True
-                self.last_t = throttle
-            if (self.last_a != aileron):
-                change = True
-                self.last_a = aileron
-            if (self.last_e != elevator):
-                change = True
-                self.last_e = elevator
-            if (self.last_r != rudder):
-                change = True
-                self.last_r = rudder
-            '''
-            if (True):
-                #print("{0}\t{1}\t{2}\t{3}".format(throttle,elevator,aileron,rudder))
-                self.send_data(throttle,aileron,elevator,rudder)
-                pygame.time.wait(70)
+            #log.debug("{0}\t{1}\t{2}\t{3}".format(throttle,elevator,aileron,rudder))
+            self.send_data(throttle,aileron,elevator,rudder)
+            pygame.time.wait(60)
 
 
 app = App()
