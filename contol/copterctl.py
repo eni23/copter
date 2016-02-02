@@ -62,10 +62,10 @@ class App:
 
 
     # send data to dongle
-    def send_data(self, t, a, e, r):
-        #msg_d = struct.pack("=HHHH", t, a, e, r)
+    def send_data(self, t, a, e, r, f):
+        msg = struct.pack("=HHHH", t, a, e, r)
         #checksum = crc8dallas.calc(msg_d)
-        msg = struct.pack("=HHHHB", t, a, e, r, 0)
+        #msg = struct.pack("=HHHHB", t, a, e, r, 0)
         self.serial.write(msg)
 
 
@@ -104,18 +104,25 @@ class App:
                 self.sensitivity = self.sensitivity + 1;
                 log.info("Sensitivity: {0}%".format(self.sensitivity))
 
+            if (self.joystick.get_button(1)):
+                flip = 60;
+                log.info("sent flip flag");
+            else:
+                flip = 0;
             raw_t = self.joystick.get_axis(4)
             raw_r = self.joystick.get_axis(2)
             raw_e = self.invert_float( self.joystick.get_axis(1) )
             raw_a = self.joystick.get_axis(0)
 
-            throttle = self.ppm_val( raw_t )
+            throttle = int( ( self.range_convert( raw_t , -1, 1, 0, 1000 ) / 100 ) * self.sensitivity ) + 1000
+            #throttle = self.ppm_val( raw_t )
             rudder   = self.ppm_val( self.min_pct(raw_r, self.sensitivity) )
             elevator = self.ppm_val( self.min_pct(raw_e, self.sensitivity) )
             aileron  = self.ppm_val( self.min_pct(raw_a, self.sensitivity) )
 
+            #print(raw_t, throttle_sens)
             #log.debug("{0}\t{1}\t{2}\t{3}".format(throttle,elevator,aileron,rudder))
-            self.send_data(throttle,aileron,elevator,rudder)
+            self.send_data(throttle,aileron,elevator,rudder,flip)
             pygame.time.wait(60)
 
 
