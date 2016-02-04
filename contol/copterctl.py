@@ -12,6 +12,8 @@ class App:
     def __init__(self):
         self.sensitivity = 80
         self.ticktime = 60
+        self.flip_running=False
+        self.flip_step=0
         pygame.init()
         pygame.joystick.init()
         self.joystick = None
@@ -107,11 +109,24 @@ class App:
             '''
 
 
-            if (self.joystick.get_button(1)):
-                flip = 2000;
-                #log.info("sent flip flag");
+            # flip functionality
+            if self.joystick.get_button(1) and not self.flip_running:
+                log.info("flip")
+                self.flip_running = True;
+                flip_save = elevator
+                flip_th_step = ( ( 2000 - flip_save ) / 20 )
+            if self.flip_running:
+                flip=2000
+                fl_th=flip_save
+                if (self.flip_step>10):
+                    fl_th = int(flip_th_step * self.flip_step) + flip_save
+                if self.flip_step>=20:
+                    self.flip_running=False
+                    self.flip_step=0
+                self.flip_step+=1
             else:
-                flip = 1000;
+                flip=1000
+
             raw_t = self.joystick.get_axis(4)
             raw_r = self.joystick.get_axis(2)
             raw_e = self.invert_float( self.joystick.get_axis(1) )
@@ -120,7 +135,10 @@ class App:
             throttle = int( ( self.range_convert( raw_t , -1, 1, 0, 1000 ) / 100 ) * self.sensitivity ) + 1000
             #throttle = self.ppm_val( raw_t )
             rudder   = self.ppm_val( self.min_pct(raw_r, self.sensitivity) )
-            elevator = self.ppm_val( self.min_pct(raw_e, self.sensitivity) )
+            if self.flip_running:
+                elevator = fl_th
+            else:
+                elevator = self.ppm_val( self.min_pct(raw_e, self.sensitivity) )
             aileron  = self.ppm_val( self.min_pct(raw_a, self.sensitivity) )
 
             #print(raw_t, throttle_sens)
