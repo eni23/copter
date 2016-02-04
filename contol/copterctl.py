@@ -64,20 +64,13 @@ class App:
 
     # send data to dongle
     def send_data(self, t, a, e, r, f):
-        msg = struct.pack("=HHHH", t, a, e, r)
-        #checksum = crc8dallas.calc(msg_d)
-        #msg = struct.pack("=HHHHB", t, a, e, r, 0)
+        msg = struct.pack("=HHHHH", t, a, e, r, f)
         self.serial.write(msg)
 
 
-    def min_th(self, value, num):
-        if value > 0:
-            return value - num
-        else:
-            return value + num
-
     def min_pct(self, value, amount):
         return value * (amount / 100)
+
 
     def ppm_val(self, value):
         return int( self.range_convert(value,-1,1,0,1000) + 1000 )
@@ -115,10 +108,10 @@ class App:
 
 
             if (self.joystick.get_button(1)):
-                flip = 60;
-                log.info("sent flip flag");
+                flip = 2000;
+                #log.info("sent flip flag");
             else:
-                flip = 0;
+                flip = 1000;
             raw_t = self.joystick.get_axis(4)
             raw_r = self.joystick.get_axis(2)
             raw_e = self.invert_float( self.joystick.get_axis(1) )

@@ -64,7 +64,7 @@ enum {
     PROTO_END
 };
 
-volatile uint8_t rcv_data[9];
+volatile uint8_t rcv_data[12];
 volatile uint8_t rcv_complete = 0;
 volatile uint8_t rcv_count = 0;
 uint8_t transmitterID[4];
@@ -103,7 +103,7 @@ void loop(){
 
     if (Serial.available()>0){
       while (Serial.available()>0){
-        if (rcv_count <= 7){
+        if (rcv_count <= 9){
           rcv_data[rcv_count] = Serial.read();
           rcv_count++;
         }
@@ -113,6 +113,8 @@ void loop(){
           ppm[AILERON]  = ( (uint16_t) rcv_data[3] << 8) | rcv_data[2];
           ppm[ELEVATOR] = ( (uint16_t) rcv_data[5] << 8) | rcv_data[4];
           ppm[RUDDER]   = ( (uint16_t) rcv_data[7] << 8) | rcv_data[6];
+          ppm[AUX2]     = ( (uint16_t) rcv_data[9] << 8) | rcv_data[8];
+
           rcv_count = 0;
         }
       }
