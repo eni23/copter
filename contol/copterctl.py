@@ -11,6 +11,7 @@ from pygame.locals import *
 class App:
     def __init__(self):
         self.sensitivity = 80
+        self.ticktime = 60
         pygame.init()
         pygame.joystick.init()
         self.joystick = None
@@ -103,6 +104,15 @@ class App:
             if (self.joystick.get_button(5)):
                 self.sensitivity = self.sensitivity + 1;
                 log.info("Sensitivity: {0}%".format(self.sensitivity))
+            '''
+            if (self.joystick.get_button(4)):
+                self.ticktime = self.ticktime - 1;
+                log.info("Tick time: {0}".format(self.ticktime))
+            if (self.joystick.get_button(5)):
+                self.ticktime = self.ticktime + 1;
+                log.info("Tick time: {0}".format(self.ticktime))
+            '''
+
 
             if (self.joystick.get_button(1)):
                 flip = 60;
@@ -123,7 +133,7 @@ class App:
             #print(raw_t, throttle_sens)
             #log.debug("{0}\t{1}\t{2}\t{3}".format(throttle,elevator,aileron,rudder))
             self.send_data(throttle,aileron,elevator,rudder,flip)
-            pygame.time.wait(60)
+            pygame.time.wait(5)
 
 
 app = App()

@@ -1,13 +1,15 @@
 /*
+ *
+ *
+ *
+ *
  */
 
 #include <util/atomic.h>
 #include "iface_nrf24l01.h"
 #include "crc8.h"
 
-// ############ Wiring ################
-#define PPM_pin   2  // PPM in
-//SPI Comm.pins with nRF24L01
+// Wiring
 #define MOSI_pin  3  // MOSI - D3
 #define SCK_pin   4  // SCK  - D4
 #define CE_pin    5  // CE   - D5
@@ -37,7 +39,7 @@ enum chan_order{
     AILERON,
     ELEVATOR,
     RUDDER,
-    AUX1,  // (CH5)  led light, or 3 pos. rate on CX-10, H7, or inverted flight on H101
+    AUX1,  // (CH5)  3 pos. rate on
     AUX2,  // (CH6)  flip control
     AUX3,  // (CH7)  still camera (snapshot)
     AUX4,  // (CH8)  video camera
@@ -96,50 +98,27 @@ void setup() {
 
 void loop(){
     uint32_t timeout;
-    if (rcv_complete == 1){
-      process_serial_data();
-      rcv_complete=0;
-    }
+
     timeout = process_CX10();
+
+    if (Serial.available()>0){
+      while (Serial.available()>0){
+        if (rcv_count <= 7){
+          rcv_data[rcv_count] = Serial.read();
+          rcv_count++;
+        }
+        else {
+          // Serial data order (8bit data): [t][t][a][a][e][e][r][r] ([mode][flip])
+          ppm[THROTTLE] = ( (uint16_t) rcv_data[1] << 8) | rcv_data[0];
+          ppm[AILERON]  = ( (uint16_t) rcv_data[3] << 8) | rcv_data[2];
+          ppm[ELEVATOR] = ( (uint16_t) rcv_data[5] << 8) | rcv_data[4];
+          ppm[RUDDER]   = ( (uint16_t) rcv_data[7] << 8) | rcv_data[6];
+          rcv_count = 0;
+        }
+      }
+    }
+
     while(micros() < timeout)
     {   };
 
-}
-
-
-
-void serialEvent() {
-  if (rcv_count <= 8){
-    rcv_data[rcv_count] = Serial.read();
-    rcv_count++;
-  }
-  else {
-    rcv_complete = 1;
-    rcv_count = 0;
-  }
-}
-
-
-void process_serial_data(){
-
-  /*uint8_t data[8] = {
-    rcv_data[0],
-    rcv_data[1],
-    rcv_data[2],
-    rcv_data[3],
-    rcv_data[4],
-    rcv_data[5],
-    rcv_data[6],
-    rcv_data[7]
-  };
-  uint8_t crc = CRC8(data,8);
-  if (crc == rcv_data[8]){
-    //ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-*/
-      ppm[THROTTLE] = ( (uint16_t) rcv_data[1] << 8) | rcv_data[0];
-      ppm[AILERON] = ( (uint16_t) rcv_data[3] << 8) | rcv_data[2];
-      ppm[ELEVATOR] = ( (uint16_t) rcv_data[5] << 8) | rcv_data[4];
-      ppm[RUDDER] = ( (uint16_t) rcv_data[7] << 8) | rcv_data[6];
-    //}
-  //}
 }
