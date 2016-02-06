@@ -1,3 +1,9 @@
 dongle/build/*/*
 dongle/build/*
 !dongle/build/.gitkeep
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+*.log
