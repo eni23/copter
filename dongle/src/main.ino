@@ -49,6 +49,15 @@ enum chan_order{
     AUX8,  // (CH12) Reset / Rebind
 };
 
+#define CMD_NONE              0
+#define CMD_FLIP              1
+#define CMD_SWITCH_TO_MODE_1  2
+#define CMD_SWITCH_TO_MODE_2  3
+#define CMD_SWITCH_TO_MODE_3  4
+#define CMD_REBIND            5
+#define CMD_RESET             6
+
+
 #define PPM_MIN 1000
 #define PPM_SAFE_THROTTLE 1050
 #define PPM_MID 1500
@@ -98,23 +107,39 @@ void setup() {
 
 void loop(){
     uint32_t timeout;
+    uint16_t aux2 = 1000;
 
     timeout = process_CX10();
 
     if (Serial.available()>0){
       while (Serial.available()>0){
-        if (rcv_count <= 9){
+        if (rcv_count <= 8){
           rcv_data[rcv_count] = Serial.read();
           rcv_count++;
         }
         else {
-          // Serial data order (8bit data): [t][t][a][a][e][e][r][r] ([mode][flip])
+          // Serial data order (8bit data): [t][t][a][a][e][e][r][r][cmd])
           ppm[THROTTLE] = ( (uint16_t) rcv_data[1] << 8) | rcv_data[0];
           ppm[AILERON]  = ( (uint16_t) rcv_data[3] << 8) | rcv_data[2];
           ppm[ELEVATOR] = ( (uint16_t) rcv_data[5] << 8) | rcv_data[4];
           ppm[RUDDER]   = ( (uint16_t) rcv_data[7] << 8) | rcv_data[6];
-          ppm[AUX2]     = ( (uint16_t) rcv_data[9] << 8) | rcv_data[8];
-
+          //ppm[AUX2]     = ( (uint16_t) rcv_data[9] << 8) | rcv_data[8];
+          aux2 = 1000;
+          switch (rcv_data[8]){
+            case CMD_FLIP:
+              aux2 = 2000;
+              break;
+            case CMD_SWITCH_TO_MODE_1:
+              ppm[AUX1] = 1000;
+              break;
+            case CMD_SWITCH_TO_MODE_2:
+              ppm[AUX1] = 1500;
+              break;
+            case CMD_SWITCH_TO_MODE_3:
+              ppm[AUX1] = 2000;
+              break;
+          }
+          ppm[AUX2] = aux2;
           rcv_count = 0;
         }
       }

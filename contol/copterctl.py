@@ -2,7 +2,6 @@ import struct
 import serial
 import time
 import pygame
-import crc8dallas
 import sys
 import log
 from pygame.locals import *
@@ -14,6 +13,9 @@ class App:
         self.ticktime = 60
         self.flip_running=False
         self.flip_step=0
+        self.limit_data = {};
+        self.mode = 1;
+
         pygame.init()
         pygame.joystick.init()
         self.joystick = None
@@ -50,9 +52,25 @@ class App:
         log.info("Turn on the quadcopter now")
         r = self.serial.read(1)
         log.debug("Got response from dongle: {0}".format(r[0]))
-        time.sleep(5)
+        time.sleep(3)
         log.info("Ready to fly")
 
+
+    def millis(self):
+        return int(round(time.time() * 1000))
+
+    def limit(self, id, every_ms ):
+        now = self.millis()
+        try:
+            dbdata = self.limit_data[str(id)]
+        except KeyError:
+            self.limit_data[str(id)] = 0
+            dbdata = 0
+        if dbdata < (now - every_ms):
+            self.limit_data[str(id)] = now
+            return True
+        else:
+            return False
 
     # invert float number
     def invert_float(self, n):
@@ -65,8 +83,8 @@ class App:
 
 
     # send data to dongle
-    def send_data(self, t, a, e, r, f):
-        msg = struct.pack("=HHHHH", t, a, e, r, f)
+    def send_data(self, t, a, e, r, cmd):
+        msg = struct.pack("=HHHHB", t, a, e, r, cmd)
         self.serial.write(msg)
 
 
@@ -93,30 +111,43 @@ class App:
                     self.quit()
                     return
 
-            if (self.joystick.get_button(4)):
-                self.sensitivity = self.sensitivity - 1;
-                log.info("Sensitivity: {0}%".format(self.sensitivity))
-            if (self.joystick.get_button(5)):
-                self.sensitivity = self.sensitivity + 1;
-                log.info("Sensitivity: {0}%".format(self.sensitivity))
-            '''
-            if (self.joystick.get_button(4)):
-                self.ticktime = self.ticktime - 1;
-                log.info("Tick time: {0}".format(self.ticktime))
-            if (self.joystick.get_button(5)):
-                self.ticktime = self.ticktime + 1;
-                log.info("Tick time: {0}".format(self.ticktime))
-            '''
+
+            # default dongle cmd is 0
+            cmd = 0
+
+            # Sensitivity / mode setting
+            b_hat = self.joystick.get_hat(0)
+            if (b_hat[0] != 0):
+                if ( self.limit(0, 180) ):
+                    if (b_hat[0] == -1):
+                        if self.mode > 1:
+                            self.mode = self.mode - 1
+                            cmd = self.mode + 1
+                    else:
+                        if self.mode < 3:
+                            self.mode = self.mode + 1
+                            cmd = self.mode + 1
+                    log.info("Mode: {0}".format(self.mode))
+
+            if (b_hat[1] != 0):
+                if ( self.limit(0, 180) ):
+                    if (b_hat[1] == -1):
+                        if self.sensitivity > 1:
+                            self.sensitivity = self.sensitivity - 1
+                    else:
+                        if self.sensitivity < 100:
+                            self.sensitivity = self.sensitivity + 1
+                    log.info("Sensitivity: {0}%".format(self.sensitivity))
 
 
             # flip functionality
             if self.joystick.get_button(1) and not self.flip_running:
-                log.info("flip")
+                #log.info("flip")
                 self.flip_running = True;
                 flip_save = elevator
                 flip_th_step = ( ( 2000 - flip_save ) / 20 )
             if self.flip_running:
-                flip=2000
+                cmd=1
                 fl_th=flip_save
                 if (self.flip_step>10):
                     fl_th = int(flip_th_step * self.flip_step) + flip_save
@@ -124,8 +155,6 @@ class App:
                     self.flip_running=False
                     self.flip_step=0
                 self.flip_step+=1
-            else:
-                flip=1000
 
             raw_t = self.joystick.get_axis(4)
             raw_r = self.joystick.get_axis(2)
@@ -133,17 +162,15 @@ class App:
             raw_a = self.joystick.get_axis(0)
 
             throttle = int( ( self.range_convert( raw_t , -1, 1, 0, 1000 ) / 100 ) * self.sensitivity ) + 1000
-            #throttle = self.ppm_val( raw_t )
             rudder   = self.ppm_val( self.min_pct(raw_r, self.sensitivity) )
-            if self.flip_running:
+            # flip is running
+            if cmd==1:
                 elevator = fl_th
             else:
                 elevator = self.ppm_val( self.min_pct(raw_e, self.sensitivity) )
             aileron  = self.ppm_val( self.min_pct(raw_a, self.sensitivity) )
 
-            #print(raw_t, throttle_sens)
-            #log.debug("{0}\t{1}\t{2}\t{3}".format(throttle,elevator,aileron,rudder))
-            self.send_data(throttle,aileron,elevator,rudder,flip)
+            self.send_data(throttle,aileron,elevator,rudder,cmd)
             pygame.time.wait(5)
 
 
