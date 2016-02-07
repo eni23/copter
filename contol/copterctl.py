@@ -1,3 +1,6 @@
+#/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import struct
 import serial
 import time
@@ -5,7 +8,6 @@ import pygame
 import sys
 import log
 from pygame.locals import *
-
 
 class App:
     def __init__(self):
@@ -20,20 +22,22 @@ class App:
         pygame.joystick.init()
         self.joystick = None
         self.joystick_names = []
-        for i in range(0, pygame.joystick.get_count()):
-            self.joystick_names.append(pygame.joystick.Joystick(i).get_name())
-        log.debug("Using Joystick: " + self.joystick_names[0])
 
-        if (len(self.joystick_names) > 0):
-            self.joystick = pygame.joystick.Joystick(0)
-            self.joystick.init()
-            log.info("Joystick initalized, press r2 to continue")
-            val=0
-            while val != -1.0:
-                self.g_keys = pygame.event.get()
-                val = self.joystick.get_axis(4)
-                pygame.time.wait(20)
-            log.info("Joystick calibrated")
+        if pygame.joystick.get_count()==0:
+            log.error("No joysticks found")
+            sys.exit(1)
+
+        log.debug("Using Joystick: {}".format(pygame.joystick.Joystick(0).get_name()))
+
+        self.joystick = pygame.joystick.Joystick(0)
+        self.joystick.init()
+        log.info("Joystick initalized, press r2 to continue")
+        val=0
+        while val != -1.0:
+            self.g_keys = pygame.event.get()
+            val = self.joystick.get_axis(4)
+            pygame.time.wait(20)
+        log.info("Joystick nulled")
 
         # init usb serial dongle
         self.init_serial()
@@ -42,10 +46,14 @@ class App:
     # init serial port
     def init_serial(self):
         log.debug("Opening serial port")
-        self.serial = serial.Serial(
-            port='/dev/ttyUSB0',
-            baudrate=57600
-        )
+        try:
+            self.serial = serial.Serial(
+                port='/dev/ttyUSB0',
+                baudrate=57600
+            )
+        except:
+            log.error("Opening serial port failed")
+            sys.exit(1)
         self.serial.isOpen()
         time.sleep(1)
         log.debug("Serial ready")
@@ -174,5 +182,8 @@ class App:
             pygame.time.wait(5)
 
 
-app = App()
-app.main()
+try:
+    app = App()
+    app.main()
+except KeyboardInterrupt:
+    sys.exit(0)
