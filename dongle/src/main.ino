@@ -70,6 +70,7 @@ enum chan_order{
 enum {
     PROTO_CX10_BLUE=0,
     PROTO_CX10_GREEN,
+    PROTO_SYMAX5C1,
     PROTO_END
 };
 
@@ -86,6 +87,9 @@ static uint16_t ppm[12] = {PPM_MIN,PPM_MID,PPM_MID,PPM_MID,PPM_MID,PPM_MID,
                            PPM_MID,PPM_MID,PPM_MID,PPM_MID,PPM_MID,PPM_MID,};
 
 void setup() {
+
+    uint8_t init_proto;
+
     Serial.begin(57600);
     randomSeed((analogRead(A4) & 0x1F) | (analogRead(A5) << 5));
     pinMode(ledPin, OUTPUT);
@@ -95,13 +99,26 @@ void setup() {
     pinMode(CS_pin, OUTPUT);
     pinMode(CE_pin, OUTPUT);
     pinMode(MISO_pin, INPUT);
-
-    current_protocol = PROTO_CX10_BLUE;
     NRF24L01_Reset();
     NRF24L01_Initialize();
-    CX10_init();
-    CX10_bind();
-    delay(4000);
+
+    while (!Serial.available()){ }
+    init_proto = Serial.read();
+    switch (init_proto){
+      case 1:
+        current_protocol = PROTO_CX10_BLUE;
+        CX10_init();
+        CX10_bind();
+        delay(4000);
+        break;
+      case 2:
+        current_protocol = PROTO_SYMAX5C1;
+        Symax_init();
+        SymaX_bind();
+        delay(2000);
+        break;
+    }
+
     Serial.print(5);
 }
 
@@ -109,7 +126,14 @@ void loop(){
     uint32_t timeout;
     uint16_t aux2 = 1000;
 
-    timeout = process_CX10();
+    switch (current_protocol){
+      case PROTO_CX10_BLUE:
+        timeout = process_CX10();
+        break;
+      case PROTO_SYMAX5C1:
+        timeout = process_SymaX();
+        break;
+    }
 
     if (Serial.available()>0){
       while (Serial.available()>0){

@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import struct
@@ -17,6 +17,18 @@ class App:
         self.flip_step=0
         self.limit_data = {};
         self.mode = 1;
+        self.proto = False;
+
+        try:
+            if (sys.argv[1]=="--syma"):
+                log.info("Using protocol syma")
+                self.proto = 2;
+        except:
+            pass;
+        if self.proto == False:
+            log.info("Using protocol CX-10")
+            self.proto = 1;
+
 
         pygame.init()
         pygame.joystick.init()
@@ -55,7 +67,8 @@ class App:
             log.error("Opening serial port failed")
             sys.exit(1)
         self.serial.isOpen()
-        time.sleep(1)
+        time.sleep(3)
+        self.serial.write([self.proto])
         log.debug("Serial ready")
         log.info("Turn on the quadcopter now")
         r = self.serial.read(1)
@@ -88,6 +101,11 @@ class App:
     # convert range
     def range_convert(self, value, old_min, old_max, new_min, new_max):
         return ( (value - old_min) / (old_max - old_min) ) * (new_max - new_min) + new_min
+
+    # send init packet
+    def send_init(self, proto):
+        msg = struct.pack("=B", proto)
+        self.serial.write(msg)
 
 
     # send data to dongle
