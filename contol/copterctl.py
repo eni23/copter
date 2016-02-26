@@ -102,11 +102,6 @@ class App:
     def range_convert(self, value, old_min, old_max, new_min, new_max):
         return ( (value - old_min) / (old_max - old_min) ) * (new_max - new_min) + new_min
 
-    # send init packet
-    def send_init(self, proto):
-        msg = struct.pack("=B", proto)
-        self.serial.write(msg)
-
 
     # send data to dongle
     def send_data(self, t, a, e, r, cmd):
